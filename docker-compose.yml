@@ -1,0 +1,37 @@
+services:
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:rocm
+    restart: always
+    environment:
+      HSA_OVERRIDE_GFX_VERSION: 11.0.0
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_NUM_PARALLEL: 1
+    volumes:
+      - /usr/share/ollama/.ollama:/root/.ollama
+    devices:
+      - /dev/dri
+      - /dev/kfd
+    shm_size: 16G
+  open-webui:
+    build: open-webui
+    container_name: open-webui
+    restart: always
+    volumes:
+      - open-webui-volume:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - USER_AGENT=open-webui
+    env_file:
+      - open-webui/.env
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: always
+    depends_on:
+      - open-webui
+    env_file:
+      - cloudflared/.env
+    command: tunnel run
+volumes:
+  open-webui-volume:
